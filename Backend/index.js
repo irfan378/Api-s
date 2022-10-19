@@ -5,21 +5,27 @@ const app = express();
 const redis = require("./redis-client");
 const PORT = 5001;
 
-
 app.use(express.json());
 app.post("/data", async (req, res) => {
   const repo = req.body.repo;
- 
-  const response = await axios.get(`https://api.github.com/repos/${repo}`).then(
-    function (response) {
-      console.log(response)
-    }
-  );
- 
+
+  const value = await redis.get(repo);
+  if (value) {
+   return res.json({
+      from: "redis",
+      status: "Ok",
+      stars: value,
+    });
+  }
+  const response = await axios.get(`https://api.github.com/repos/${repo}`);
+
+  if (response.data.stargazers_count != undefined) {
+    await redis.set(repo, response.data.stargazers_count);
+  }
   res.json({
     from: "remote",
     status: "Ok",
-    stars: response.stargazers_count,
+    stars: response.data.stargazers_count,
   });
 });
 app.get("/", (req, res) => {
