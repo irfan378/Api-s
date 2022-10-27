@@ -3,6 +3,7 @@ const path = require("path");
 const axios = require("axios");
 const app = express();
 const redis = require("./redis-client");
+const rateLimiter = require("./rateLimiter");
 const PORT = 5001;
 
 app.use(express.json());
@@ -63,10 +64,11 @@ app.post("/api1", async (req, res) => {
     ttl,
   });
 });
-app.post("/api3", (req, res) => {
+app.post("/api2",rateLimiter({secondsWindow:10,allowedHits:4}), async(req, res) => {
   return res.json({
     response: "ok",
-    callsInAMinute: 0,
+    callsInAMinute: req.requests,
+    ttl:req.ttl
   });
 });
 app.post("/api3", (req, res) => {
